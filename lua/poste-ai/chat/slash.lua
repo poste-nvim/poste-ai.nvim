@@ -59,6 +59,11 @@ local function builtins()
       desc = "change provider / model",
       run = function() require("poste-ai.commands").set_model() end,
     },
+    {
+      name = "help",
+      desc = "show keymap help",
+      run = function() require("poste-ai.chat.window").show_help() end,
+    },
   }
 end
 

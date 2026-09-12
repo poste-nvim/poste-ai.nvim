@@ -16,7 +16,7 @@ describe("poste-ai.chat.slash", function()
   it("lists built-in commands plus active context commands", function()
     local names = {}
     for _, c in ipairs(slash.commands()) do names[#names + 1] = c.name end
-    assert.are.same({ "new", "session", "models" }, names)
+    assert.are.same({ "new", "session", "models", "help" }, names)
 
     context_api.register("test", {
       system_prompt = function() return "test" end,
@@ -28,7 +28,17 @@ describe("poste-ai.chat.slash", function()
     context_api.set_active("test")
     names = {}
     for _, c in ipairs(slash.commands()) do names[#names + 1] = c.name end
-    assert.are.same({ "new", "session", "models", "connections" }, names)
+    assert.are.same({ "new", "session", "models", "help", "connections" }, names)
+  end)
+
+  it("/help runs the keymap help", function()
+    local notified
+    local orig = vim.notify
+    vim.notify = function(msg) notified = msg end
+    local ok = slash.submit("/help")
+    vim.notify = orig
+    assert.is_true(ok)
+    assert.truthy(notified and notified:find("PosteAI keymaps:"), "help text notified")
   end)
 
   it("on_input_changed shows the palette for a '/' prefix and filters", function()
@@ -36,7 +46,7 @@ describe("poste-ai.chat.slash", function()
     window.set_input_text("/")
     slash.on_input_changed()
     assert.is_true(popup.is_open())
-    assert.are.equal(3, #popup._test.st.items)
+    assert.are.equal(4, #popup._test.st.items)
 
     window.set_input_text("/se")
     slash.on_input_changed()
