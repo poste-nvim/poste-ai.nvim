@@ -142,8 +142,8 @@ local function key(k)
   return config.get_keymap("chat_window", k)
 end
 
-local function input_key(k)
-  return config.get_keymap("chat_input", k)
+local function input_key(k, default)
+  return config.get_keymap("chat_input", k, default)
 end
 
 --- Build one keymap binding; `handler` is called with no args.

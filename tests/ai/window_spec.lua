@@ -88,6 +88,11 @@ describe("poste-ai.chat.window", function()
         assert.is_truthy(m.buffer)
       end
     end
+    -- insert mode: <C-Space> opens the @mention completion — the mapping used
+    -- to be dropped because input_key() ignored the default it was passed
+    local mention = vim.fn.maparg("<C-Space>", "i", false, true)
+    assert.is_table(mention, "<C-Space> mention completion in insert mode")
+    assert.is_truthy(mention.buffer)
     window.focus_chat()  -- conv keymaps resolve against the conversation buffer
     local toggle = vim.fn.maparg("R", "n", false, true)
     assert.is_table(toggle)

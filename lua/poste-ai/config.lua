@@ -66,6 +66,7 @@ M.defaults = {
       new_session = "<C-n>",
       history_up = "<Up>",      -- previous question; inside a multi-line draft the
       history_down = "<Down>",  -- arrows move the cursor instead (first/last line wraps)
+      complete_mention = "<C-Space>", -- insert mode, @-completion popup
     },
   },
 }
