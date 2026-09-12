@@ -8,10 +8,14 @@ local M = {}
 
 local MAX_HEIGHT = 8
 
+--- Extmark namespace for the grayed-out description part of each item line.
+local DESC_NS = vim.api.nvim_create_namespace("poste_ai_popup_desc")
+
 local st = {
   buf = nil,
   win = nil,
   items = {},
+  marks = {},
   sel = 1,
   on_select = nil,
   on_cancel = nil,
@@ -26,9 +30,15 @@ end
 
 local function render()
   if not st.win or not vim.api.nvim_win_is_valid(st.win) then return end
+  if st.buf and vim.api.nvim_buf_is_valid(st.buf) then
+    for _, m in ipairs(st.marks) do
+      pcall(vim.api.nvim_buf_del_extmark, st.buf, DESC_NS, m)
+    end
+  end
+  st.marks = {}
   local lines = {}
   local width = 1
-  for _, it in ipairs(st.items) do
+  for lnum, it in ipairs(st.items) do
     local line = " " .. (it.label or "")
     if it.description and it.description ~= "" then
       line = line .. "  " .. it.description
@@ -45,6 +55,20 @@ local function render()
   vim.api.nvim_set_option_value("modifiable", true, { buf = st.buf })
   vim.api.nvim_buf_set_lines(st.buf, 0, -1, false, lines)
   vim.api.nvim_set_option_value("modifiable", false, { buf = st.buf })
+  -- Gray out the description part of each line (@comment), so a secondary
+  -- annotation like a connection name (poste-db /databases) reads as meta.
+  -- Columns are byte offsets: the description follows " <label>  ".
+  for lnum, it in ipairs(st.items) do
+    if it.description and it.description ~= "" then
+      local start_col = 1 + #(it.label or "") + 2
+      local id = vim.api.nvim_buf_set_extmark(st.buf, DESC_NS, lnum - 1, start_col, {
+        end_col = start_col + #it.description,
+        hl_group = "@comment",
+        strict = false,
+      })
+      st.marks[#st.marks + 1] = id
+    end
+  end
 
   local max_w = 40
   if st.input_win and vim.api.nvim_win_is_valid(st.input_win) then
@@ -201,6 +225,7 @@ M._test = {
   st = st,
   render = render,
   choose = choose,
+  DESC_NS = DESC_NS,
 }
 
 return M

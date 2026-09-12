@@ -44,6 +44,33 @@ describe("poste-ai.chat.popup", function()
     assert.are.same("/session", lines[2]:match("^%s*(/%S+)"))
   end)
 
+  it("grays out the description part with the @comment highlight", function()
+    window.open()
+    popup.open(items, {})  -- {label, description}
+    local marks = vim.api.nvim_buf_get_extmarks(
+      popup._test.st.buf, popup._test.DESC_NS, 0, -1, { details = true })
+    assert.are.equal(3, #marks)
+    -- one mark per item, starting right after " <label>  "
+    for i, item in ipairs(items) do
+      local id, row, col, details = marks[i][1], marks[i][2], marks[i][3], marks[i][4]
+      assert.are.equal(i - 1, row)
+      assert.are.equal(1 + #item.label + 2, col)
+      assert.are.equal("@comment", details.hl_group)
+      assert.are.equal(col + #item.description, details.end_col)
+      assert.is_number(id)
+    end
+
+    -- set_items re-render replaces old marks (no duplicates / stale ids)
+    popup.set_items({ { label = "/only", description = "x" } })
+    local after = vim.api.nvim_buf_get_extmarks(
+      popup._test.st.buf, popup._test.DESC_NS, 0, -1, { details = true })
+    assert.are.equal(1, #after)
+    -- items without a description get no mark
+    popup.set_items({ { label = "/bare" } })
+    assert.are.equal(0, #vim.api.nvim_buf_get_extmarks(
+      popup._test.st.buf, popup._test.DESC_NS, 0, -1, {}))
+  end)
+
   it("set_items replaces the list and clamps the selection", function()
     window.open()
     popup.open(items, {})
