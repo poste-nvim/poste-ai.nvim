@@ -63,7 +63,12 @@ function M.load(id)
   if not ok then return nil end
   local ok_j, obj = pcall(vim.json.decode, table.concat(raw, "\n"), { luanil = { object = true, array = true } })
   if ok_j and type(obj) == "table" and type(obj.session) == "table" then
-    return obj.session
+    local s = obj.session
+    -- a hand-edited / partially-written file can carry a session without a
+    -- messages list; callers append via `s.messages[#s.messages + 1]` and
+    -- would error on the nil index
+    if type(s.messages) ~= "table" then s.messages = {} end
+    return s
   end
   return nil
 end

@@ -117,6 +117,19 @@ describe("poste-ai.chat.conversation", function()
     assert.are.equal(2, #conversation.messages())
   end)
 
+  it("messages() keeps ts so a persistence round-trip stays matches_messages-stable", function()
+    conversation.set_messages({
+      { role = "user", text = "q1", ts = 100 },
+      { role = "assistant", text = "a1", model = "m", ts = 101 },
+    })
+    local exported = conversation.messages()
+    -- the exported shape must survive the comparison the open path uses —
+    -- dropping ts used to force a needless repaint (and fresh-time stamps)
+    assert.is_true(conversation.matches_messages(exported))
+    assert.are.equal(100, exported[1].ts)
+    assert.are.equal(101, exported[2].ts)
+  end)
+
   it("matches_messages detects when the buffer already shows a message list", function()
     local msgs = {
       { role = "user", text = "q1", ts = 100 },

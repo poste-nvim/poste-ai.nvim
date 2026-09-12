@@ -65,4 +65,22 @@ describe("poste-ai.chat.session", function()
     vim.fn.writefile({ "not json {" }, tmp_dir .. "/" .. s.id .. ".json")
     assert.is_nil(session.load(s.id))
   end)
+
+  it("coerces a session without a messages list", function()
+    local s = session.new()
+    vim.fn.mkdir(tmp_dir, "p")
+    -- a hand-edited file can carry a bare session object; append paths do
+    -- `s.messages[#s.messages + 1] = …` and must not hit a nil index
+    vim.fn.writefile(
+      { vim.json.encode({ version = 1, session = { id = s.id, name = "bare" } }) },
+      tmp_dir .. "/" .. s.id .. ".json"
+    )
+    local loaded = session.load(s.id)
+    assert.is_not_nil(loaded)
+    assert.are.equal(0, #loaded.messages)
+    -- and the session keeps working: an appended record must not error
+    session.set_current(loaded)
+    assert.is_not_nil(session.append_record("note", "after coercion"))
+    assert.are.equal(1, #session.current().messages)
+  end)
 end)

@@ -430,11 +430,14 @@ function M.last_assistant_text()
   end
 end
 
---- All messages, shape suitable for persistence.
+--- All messages, shape suitable for persistence. `ts` is included so a
+--- round-trip through this shape keeps `matches_messages` stable and the
+--- rendered timestamps (dropping it made every restored message render with
+--- a fresh "now" stamp).
 function M.messages()
   local out = {}
   for _, m in ipairs(st.messages) do
-    out[#out + 1] = { role = m.role, text = m.text, model = m.model }
+    out[#out + 1] = { role = m.role, text = m.text, model = m.model, ts = m.ts }
   end
   return out
 end
