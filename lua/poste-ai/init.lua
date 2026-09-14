@@ -25,7 +25,11 @@ function M.setup(opts)
       pcall(function() require("poste-ai.chat.session").save() end)
     end,
   })
-  math.randomseed(os.time())
+  -- os.time() alone gives two instances launched in the same second the same
+  -- seed (identical random streams), which made session.make_id()'s random
+  -- tail collide deterministically across instances — mix in ns-resolution
+  -- monotonic time and the pid
+  math.randomseed(os.time() + vim.loop.hrtime() % 2^31 + (vim.fn.getpid() or 0))
 end
 
 --- Register a context (see context_api.lua for the contract).
