@@ -201,7 +201,6 @@ function M.info()
   else
     lines[#lines + 1] = "  provider:  " .. err
   end
-  context_api.active()  -- ensure the active context is resolved
   lines[#lines + 1] = ("  context:   %s"):format(state.active_context or "(generic)")
   local ids = context_api.list()
   lines[#lines + 1] = ("  registered: %s"):format(#ids > 0 and table.concat(ids, ", ") or "(none)")
