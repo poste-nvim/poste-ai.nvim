@@ -13,6 +13,14 @@ describe("poste-ai.provider.sse", function()
       assert.are.equal("tight", payload)
     end)
 
+    it("trims extra whitespace after the colon leniently", function()
+      -- proxies sometimes emit a double space; the extra must not leak into
+      -- the payload or the JSON decode fails and the delta is dropped
+      local kind, payload = sse.classify_line('data:  {"x":1}')
+      assert.are.equal("data", kind)
+      assert.are.equal('{"x":1}', payload)
+    end)
+
     it("classifies the [DONE] sentinel", function()
       assert.are.equal("done", sse.classify_line("data: [DONE]"))
       assert.are.equal("done", sse.classify_line("data:[DONE]"))

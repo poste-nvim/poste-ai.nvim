@@ -24,8 +24,11 @@ end
 --- @return string payload
 function M.classify_line(line)
   if line:sub(1, 1) == ":" then return "comment", "" end
+  -- both data forms trim surrounding whitespace leniently: a proxy emitting
+  -- `data:  {…}` (double space) would otherwise hand the decoder a leading
+  -- space, fail to parse and silently drop the delta
   if line:sub(1, 6) == "data: " then
-    local payload = line:sub(7)
+    local payload = line:sub(7):match("^%s*(.-)%s*$")
     if payload == "[DONE]" then return "done", "" end
     return "data", payload
   end

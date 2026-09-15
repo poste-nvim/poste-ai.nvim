@@ -140,11 +140,19 @@ function M.specs(lines)
         return true
       end
       for _, pat in ipairs({ "%*[^%s%*][^%*]*%*", "_[^%s_][^_]*_" }) do
+        -- CommonMark: intraword underscores don't emphasize — snake_case
+        -- identifiers like my_table_name must stay literal (concealing their
+        -- underscores would corrupt the visible text). Asterisks may sit
+        -- inside words, so the rule only applies to the `_` pattern.
+        local underscore = pat:sub(1, 1) == "_"
         pos = 1
         while true do
           local s, e = line:find(pat, pos)
           if not s then break end
-          if not contained(s, e) and free(s, e) then
+          local intraword = underscore
+            and ((s > 1 and line:sub(s - 1, s - 1):match("[%w_]") ~= nil)
+              or (e < #line and line:sub(e + 1, e + 1):match("[%w_]") ~= nil))
+          if not intraword and not contained(s, e) and free(s, e) then
             marks[#marks + 1] = { row = i - 1, col = s, length = e - s - 1, group = "PosteAiItalic" }
             marks[#marks + 1] = { row = i - 1, col = s - 1, length = 1, group = "PosteAiItalic", conceal = "" }
             marks[#marks + 1] = { row = i - 1, col = e - 1, length = 1, group = "PosteAiItalic", conceal = "" }

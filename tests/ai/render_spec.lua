@@ -99,6 +99,26 @@ describe("poste-ai.chat.render", function()
     assert.are.equal(6, conceal_runs)  -- bold x2, *ital* x2, _und_ x2
   end)
 
+  it("leaves intraword underscores literal (snake_case identifiers)", function()
+    -- regression: _name_ used to emphasize the middle of identifiers and
+    -- conceal their underscores, visibly corrupting e.g. my_table_name
+    local specs = render.specs({ "the my_table_name constraint" })
+    for _, m in ipairs(specs.marks) do
+      assert.is_not.equal("PosteAiItalic", m.group)
+      assert.is_nil(m.conceal)
+    end
+  end)
+
+  it("still italicizes underscores at word boundaries", function()
+    local specs = render.specs({ "this is _real_ (ok) here" })
+    local ital
+    for _, m in ipairs(specs.marks) do
+      if m.group == "PosteAiItalic" and m.conceal == nil then ital = m end
+    end
+    assert.truthy(ital)
+    assert.are.equal(4, ital.length)  -- "real"
+  end)
+
   it("treats emphasis markers inside inline code as literal text", function()
     local specs = render.specs({ "use `**not bold**` and `_not ital_` here" })
     for _, m in ipairs(specs.marks) do

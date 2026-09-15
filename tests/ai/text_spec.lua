@@ -12,6 +12,26 @@ describe("poste-ai.text", function()
       local result = text.truncate(string.rep("x", 20), 8)
       assert.equals("xxxxx...", result)
     end)
+
+    it("respects the limit for multibyte text", function()
+      local result = text.truncate("\u{4f60}\u{597d}\u{4e16}\u{754c}\u{4f60}", 6)
+      assert.equals("\u{4f60}...", result)
+    end)
+
+    it("never exceeds the limit, even when limit <= 3", function()
+      -- regression: limit<=3 used to append a full "..." to leftover text,
+      -- producing 3+ display columns for a 1-column budget
+      for limit = 0, 3 do
+        local result = text.truncate("xxxx", limit)
+        assert.message(("limit=%d produced %q"):format(limit, result))
+          .is_true(vim.fn.strdisplaywidth(result) <= limit)
+      end
+    end)
+
+    it("returns the empty string for a non-positive limit", function()
+      assert.equals("", text.truncate("anything", 0))
+      assert.equals("", text.truncate("anything", -1))
+    end)
   end)
 
   describe("utf8_safe_cut", function()
