@@ -49,6 +49,28 @@ function M.toggle_chat(context_id)
   M.open_chat(context_id)
 end
 
+--- Open the chat and prefill the input with a mention of a line range from
+--- the calling buffer — the user-facing half of `mention.range_mention`,
+--- reachable as `:'<,'>PosteAIChat` on a visual selection. The selection
+--- rides into the prompt as an @file ref, so asking about it is one Enter
+--- away. Must be called while the source buffer is still current.
+--- @param context_id string|nil
+--- @param l1 number 1-based first line
+--- @param l2 number 1-based last line
+function M.ask_selection(context_id, l1, l2)
+  local buf = vim.api.nvim_get_current_buf()
+  local ref = require("poste-ai.chat.mention").range_mention(buf, l1, l2)
+  if not ref then
+    notify("cannot mention an unnamed buffer", vim.log.levels.WARN)
+    return
+  end
+  M.open_chat(context_id)
+  local window = require("poste-ai.chat.window")
+  local cur = window.input_text()
+  window.set_input_text(cur ~= "" and cur .. " " .. ref or ref)
+  window.focus_input(true)
+end
+
 --- Start a fresh session.
 function M.new_session()
   local session = require("poste-ai.chat.session")
@@ -215,11 +237,17 @@ function M.setup()
 
   vim.api.nvim_create_user_command("PosteAIChat", function(args)
     local ctx = vim.trim(args.args)
-    M.toggle_chat(ctx ~= "" and ctx or nil)
+    local ctx_id = ctx ~= "" and ctx or nil
+    if (args.range or 0) > 0 then
+      M.ask_selection(ctx_id, args.line1, args.line2)
+      return
+    end
+    M.toggle_chat(ctx_id)
   end, {
     nargs = "?",
+    range = true,
     complete = function() return context_api.list() end,
-    desc = "Toggle the PosteAI chat sidebar — :PosteAIChat [context]",
+    desc = "Toggle the PosteAI chat sidebar — :PosteAIChat [context]; on a visual selection :'<,'>PosteAIChat mentions the lines",
   })
 
   vim.api.nvim_create_user_command("PosteAIModel", function(args)

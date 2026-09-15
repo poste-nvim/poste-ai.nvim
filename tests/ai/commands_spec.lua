@@ -49,3 +49,57 @@ describe("poste-ai.commands delete_session", function()
     assert.are.equal("kept", session.load(cur.id).name)
   end)
 end)
+
+describe("poste-ai.commands ask_selection", function()
+  local config = require("poste-ai.config")
+  local session = require("poste-ai.chat.session")
+  local commands = require("poste-ai.commands")
+  local window = require("poste-ai.chat.window")
+
+  after_each(function()
+    window.close()
+  end)
+
+  it("prefills the input with a line-range mention of the selection", function()
+    local path = vim.fn.tempname() .. "-selection.lua"
+    vim.fn.writefile({ "line one", "line two", "line three" }, path)
+    local buf = vim.fn.bufadd(path)
+    vim.api.nvim_set_current_buf(buf)
+
+    commands.ask_selection(nil, 2, 3)
+
+    assert.is_true(window.is_open())
+    local text = window.input_text()
+    -- @<path>(2-3), pointing at the file that held the selection
+    assert.truthy(text:match("^@.+%(2%-3%)$"))
+    assert.truthy(text:find(vim.fn.fnamemodify(path, ":t"), 1, true))
+    vim.api.nvim_buf_delete(buf, { force = true })
+    vim.fn.delete(path)
+  end)
+
+  it("appends to an existing draft instead of replacing it", function()
+    local path = vim.fn.tempname() .. "-selection2.lua"
+    vim.fn.writefile({ "a" }, path)
+    local buf = vim.fn.bufadd(path)
+    vim.api.nvim_set_current_buf(buf)
+    window.open()
+    window.set_input_text("what does this do")
+
+    commands.ask_selection(nil, 1, 1)
+
+    local text = window.input_text()
+    assert.truthy(text:match("^what does this do @.+%(1%)$"))
+    vim.api.nvim_buf_delete(buf, { force = true })
+    vim.fn.delete(path)
+  end)
+
+  it("warns on an unnamed buffer and leaves the chat closed", function()
+    local scratch = vim.api.nvim_create_buf(false, true)
+    vim.api.nvim_set_current_buf(scratch)
+
+    commands.ask_selection(nil, 1, 2)
+
+    assert.is_false(window.is_open())
+    vim.api.nvim_buf_delete(scratch, { force = true })
+  end)
+end)
