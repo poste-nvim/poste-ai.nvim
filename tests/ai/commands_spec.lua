@@ -51,8 +51,6 @@ describe("poste-ai.commands delete_session", function()
 end)
 
 describe("poste-ai.commands ask_selection", function()
-  local config = require("poste-ai.config")
-  local session = require("poste-ai.chat.session")
   local commands = require("poste-ai.commands")
   local window = require("poste-ai.chat.window")
 
