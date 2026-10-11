@@ -1,6 +1,6 @@
 # poste-ai.nvim
 
-AI assistant for the [Poste](https://github.com/beyondlex/poste.nvim) plugin family — a minimal,
+AI assistant for the [Poste](https://github.com/poste-nvim/poste.nvim) plugin family — a minimal,
 hacker-friendly chat side panel for Neovim.
 
 **Zero dependencies** (besides Neovim ≥ 0.10 and `curl`): no poste.nvim requirement, no Rust binary,
@@ -8,7 +8,7 @@ no LLM client library. Streaming goes through `curl -N` + a Lua SSE parser.
 
 Sibling plugins register *contexts* on top of the generic chat UI:
 
-- [poste-db.nvim](https://github.com/beyondlex/poste-db.nvim) — SQL context: `@my-conn/mydb` mentions
+- [poste-db.nvim](https://github.com/poste-nvim/poste-db.nvim) — SQL context: `@my-conn/mydb` mentions
   inject schema summaries, AI-written SQL can be executed straight into the dataset view.
 - poste-http.nvim — HTTP context (planned).
 
@@ -29,7 +29,7 @@ With lazy.nvim:
 
 ```lua
 {
-  "beyondlex/poste-ai.nvim",
+  "poste-nvim/poste-ai.nvim",
   opts = {
     providers = {
       openai = {
