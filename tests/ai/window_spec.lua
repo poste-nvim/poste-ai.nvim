@@ -251,16 +251,23 @@ describe("poste-ai.chat.window", function()
     assert.is_false(vim.fn.pumvisible() ~= 0)
     wrapped()
     assert.is_true(called)
-    -- popup branch: the handler is skipped and the raw key returned so the
-    -- built-in menu navigation runs. A real popup can't be opened in a
+    -- popup branch: the handler is skipped and the key replayed unmapped so
+    -- the built-in menu navigation runs. A real popup can't be opened in a
     -- headless busted run (insert mode is unreachable there), so pumvisible
-    -- is stubbed — the end-to-end wiring is covered by the next test
+    -- is stubbed — and the replay must go through nvim_feedkeys: a plain
+    -- (non-expr) callback mapping's return value is discarded
     vim.fn.pumvisible = function() return 1 end
+    local fed = {}
+    local real_feed = vim.api.nvim_feedkeys
+    vim.api.nvim_feedkeys = function(keys, mode, _) fed[#fed + 1] = { keys = keys, mode = mode } end
     called = false
-    local replay = wrapped()
+    wrapped()
+    vim.api.nvim_feedkeys = real_feed
     vim.fn.pumvisible = nil
     assert.is_false(called)
-    assert.are.equal(vim.api.nvim_replace_termcodes("<Up>", true, true, true), replay)
+    assert.are.equal(1, #fed)
+    assert.are.equal(vim.api.nvim_replace_termcodes("<Up>", true, true, true), fed[1].keys)
+    assert.are.equal("n", fed[1].mode)  -- "n": replay unmapped, or we'd re-trigger ourselves
   end)
 
   it("input buffer's insert-mode maps yield to the completion popup", function()
@@ -270,13 +277,19 @@ describe("poste-ai.chat.window", function()
     -- unreachable there), so pumvisible is stubbed and the installed mapping
     -- callbacks are invoked directly — while the stub is active
     vim.fn.pumvisible = function() return 1 end
+    local fed = {}
+    local real_feed = vim.api.nvim_feedkeys
+    vim.api.nvim_feedkeys = function(keys, mode, _) fed[#fed + 1] = { keys = keys, mode = mode } end
     local up = vim.fn.maparg("<Up>", "i", false, true)
     local new_session = vim.fn.maparg("<C-n>", "i", false, true)
-    local up_replay, session_replay = up.callback(), new_session.callback()
+    up.callback()
+    new_session.callback()
+    vim.api.nvim_feedkeys = real_feed
     vim.fn.pumvisible = nil
     -- the installed mapping callbacks must replay the raw key (built-in menu
     -- navigation), not fire history/new-session while the popup is open
-    assert.are.equal(vim.api.nvim_replace_termcodes("<Up>", true, true, true), up_replay)
-    assert.are.equal(vim.api.nvim_replace_termcodes("<C-n>", true, true, true), session_replay)
+    assert.are.equal(2, #fed)
+    assert.are.equal(vim.api.nvim_replace_termcodes("<Up>", true, true, true), fed[1].keys)
+    assert.are.equal(vim.api.nvim_replace_termcodes("<C-n>", true, true, true), fed[2].keys)
   end)
 end)

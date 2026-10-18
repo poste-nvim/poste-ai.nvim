@@ -153,12 +153,15 @@ local function map(buf, mode, lhs, handler, desc)
 end
 
 --- Wrap an insert-mode handler so the native completion popup keeps working:
---- while the popup is open (pumvisible) the mapped key replays as an unmapped
---- key, which moves the menu selection, instead of firing the handler.
+--- while the popup is open (pumvisible) the mapped key is replayed unmapped,
+--- which moves the menu selection, instead of firing the handler. Replayed
+--- via nvim_feedkeys because a plain (non-expr) callback mapping's return
+--- value is discarded — only expr mappings type their return value.
 local function pum_aware(handler, lhs)
   return function()
     if vim.fn.pumvisible() ~= 0 then
-      return vim.api.nvim_replace_termcodes(lhs, true, true, true)
+      vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes(lhs, true, true, true), "n", false)
+      return
     end
     handler()
   end
