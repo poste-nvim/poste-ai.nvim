@@ -243,4 +243,40 @@ describe("poste-ai.chat.window", function()
     window.open()  -- reopen restores the configured height
     assert.are.equal(cap, vim.api.nvim_win_get_height(window.input_win()))
   end)
+
+  it("pum_aware replays the key while the popup is open, runs the handler otherwise", function()
+    local called = false
+    local wrapped = window._pum_aware(function() called = true end, "<Up>")
+    -- fallback branch: no popup → the handler fires and nothing is replayed
+    assert.is_false(vim.fn.pumvisible() ~= 0)
+    wrapped()
+    assert.is_true(called)
+    -- popup branch: the handler is skipped and the raw key returned so the
+    -- built-in menu navigation runs. A real popup can't be opened in a
+    -- headless busted run (insert mode is unreachable there), so pumvisible
+    -- is stubbed — the end-to-end wiring is covered by the next test
+    vim.fn.pumvisible = function() return 1 end
+    called = false
+    local replay = wrapped()
+    vim.fn.pumvisible = nil
+    assert.is_false(called)
+    assert.are.equal(vim.api.nvim_replace_termcodes("<Up>", true, true, true), replay)
+  end)
+
+  it("input buffer's insert-mode maps yield to the completion popup", function()
+    window.open()
+    window.focus_input(false)
+    -- A real popup can't be opened in a headless busted run (insert mode is
+    -- unreachable there), so pumvisible is stubbed and the installed mapping
+    -- callbacks are invoked directly — while the stub is active
+    vim.fn.pumvisible = function() return 1 end
+    local up = vim.fn.maparg("<Up>", "i", false, true)
+    local new_session = vim.fn.maparg("<C-n>", "i", false, true)
+    local up_replay, session_replay = up.callback(), new_session.callback()
+    vim.fn.pumvisible = nil
+    -- the installed mapping callbacks must replay the raw key (built-in menu
+    -- navigation), not fire history/new-session while the popup is open
+    assert.are.equal(vim.api.nvim_replace_termcodes("<Up>", true, true, true), up_replay)
+    assert.are.equal(vim.api.nvim_replace_termcodes("<C-n>", true, true, true), session_replay)
+  end)
 end)

@@ -152,6 +152,18 @@ local function map(buf, mode, lhs, handler, desc)
   vim.keymap.set(mode, lhs, handler, { noremap = true, silent = true, buffer = buf, desc = "PosteAI: " .. desc })
 end
 
+--- Wrap an insert-mode handler so the native completion popup keeps working:
+--- while the popup is open (pumvisible) the mapped key replays as an unmapped
+--- key, which moves the menu selection, instead of firing the handler.
+local function pum_aware(handler, lhs)
+  return function()
+    if vim.fn.pumvisible() ~= 0 then
+      return vim.api.nvim_replace_termcodes(lhs, true, true, true)
+    end
+    handler()
+  end
+end
+
 local function apply_conv_keymaps(buf)
   local actions = require("poste-ai.chat.actions")
   local stream = require("poste-ai.chat.stream")
@@ -181,13 +193,14 @@ local function apply_input_keymaps(buf)
   map(buf, "i", input_key("cancel"), cancel, "cancel streaming")
   map(buf, "i", input_key("focus_chat"), function() M.focus_chat() end, "back to conversation")
   map(buf, "n", input_key("new_session"), function() require("poste-ai.commands").new_session() end, "new session")
-  map(buf, "i", input_key("new_session"), function() require("poste-ai.commands").new_session() end, "new session")
+  map(buf, "i", input_key("new_session"),
+    pum_aware(function() require("poste-ai.commands").new_session() end, "<C-n>"), "new session")
   map(buf, "i", input_key("complete_mention", "<C-Space>"), M.trigger_mention, "@mention completion")
   local history = require("poste-ai.chat.history")
   map(buf, "n", input_key("history_up", "<Up>"), function() history.up() end, "previous question")
-  map(buf, "i", input_key("history_up", "<Up>"), function() history.up() end, "previous question")
+  map(buf, "i", input_key("history_up", "<Up>"), pum_aware(history.up, "<Up>"), "previous question")
   map(buf, "n", input_key("history_down", "<Down>"), function() history.down() end, "next question")
-  map(buf, "i", input_key("history_down", "<Down>"), function() history.down() end, "next question")
+  map(buf, "i", input_key("history_down", "<Down>"), pum_aware(history.down, "<Down>"), "next question")
 end
 
 local function setup_autocmds()
@@ -478,5 +491,6 @@ end
 --- Test hooks.
 function M._state() return st end
 function M._help_actions() return HELP_ACTIONS end
+function M._pum_aware(handler, lhs) return pum_aware(handler, lhs) end
 
 return M
